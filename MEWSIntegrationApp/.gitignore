@@ -1,0 +1,52 @@
+# ---- .NET Ignore ----
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+*.log
+*.cache
+*.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.csproj.user
+appsettings*.json
+secrets.json
+coverage/
+TestResults/
+logs/
+.nuget/
+packages/
+localdb.db
+localdb-log.log
+
+# ---- Next.js Ignore ----
+node_modules/
+.next/
+out/
+build/
+npm-debug.log
+yarn-error.log
+pnpm-lock.yaml
+.env
+.env.local
+.env.*.local
+
+# ---- Tailwind CSS Ignore ----
+tailwind.config.js
+postcss.config.js
+
+# ---- TypeScript Ignore ----
+*.tsbuildinfo
+
+# ---- OS & Editor-Specific Ignore ----
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
+.idea/
