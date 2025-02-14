@@ -1,0 +1,20 @@
+[
+  {
+    "id": "12345",
+    "guestName": "John Doe",
+    "checkIn": "2025-02-15",
+    "checkOut": "2025-02-20",
+    "roomType": "Deluxe Suite",
+    "status": "Confirmed",
+    "email": "johndoe@example.com"
+  },
+  {
+    "id": "67890",
+    "guestName": "Jane Smith",
+    "checkIn": "2025-03-05",
+    "checkOut": "2025-03-10",
+    "roomType": "Executive Room",
+    "status": "Pending",
+    "email": "janesmith@example.com"
+  }
+]
