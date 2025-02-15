@@ -1,3 +1,5 @@
+using MEWSIntegrationApp.Models;
+
 namespace MEWSIntegrationApp;
 
 using Microsoft.AspNetCore.Mvc;
@@ -5,7 +7,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
 [ApiController]
-[Route("webhooks/mews")] // ✅ This should match your curl request
+[Route("webhooks/mews")]
 public class MewsWebhookController : ControllerBase
 {
     private readonly ILogger<MewsWebhookController> _logger;
@@ -20,6 +22,24 @@ public class MewsWebhookController : ControllerBase
     {
         _logger.LogInformation("Received MEWS webhook: {Payload}", payload.ToString());
         Console.WriteLine("Received MEWS webhook: {0}", payload.ToString());
-        return Ok(new { message = "Webhook received successfully" });
+    
+        var reservation = ExtractPayload(payload);
+
+        if (reservation == null)
+        {
+            return BadRequest(new { message = "invalid payload" });
+        }
+
+        return Ok(new
+            {
+                message = $"reservation {reservation.EnterpriseId} received",
+                events = $"event {reservation.Events.First()} received"
+            }
+        );
+    }
+
+    private WebhookEventPayload? ExtractPayload(JsonElement payload)
+    {
+        return payload.Deserialize<WebhookEventPayload>();
     }
 }

@@ -30,7 +30,7 @@ app.UseSwaggerUI();
 // ✅ Explicitly map controllers before UseSpa
 app.UseEndpoints(endpoints =>
 {
-    endpoints.MapControllers(); 
+    endpoints.MapControllers();
 });
 
 app.UseHttpsRedirection();
