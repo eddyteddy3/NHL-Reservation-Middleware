@@ -1,4 +1,8 @@
+using MEWSIntegrationApp.Services;
+
 var builder = WebApplication.CreateBuilder(args);
+
+var confirguration = builder.Configuration;
 
 builder.WebHost.ConfigureKestrel(options =>
 {
@@ -12,12 +16,23 @@ builder.WebHost.ConfigureKestrel(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
+
+// CORS Configuration
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
         policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
     });
+});
+
+// Register the HttpClient and Mews API Service
+builder.Services.AddHttpClient<MewsApiService>();
+builder.Services.AddTransient<MewsApiService>(provider =>
+{
+    var httpClient = provider.GetRequiredService<HttpClient>();
+    var isProduction = builder.Environment.IsProduction();
+    return new MewsApiService(httpClient, confirguration, isProduction: false);
 });
 
 var app = builder.Build();
@@ -27,7 +42,7 @@ app.UseCors("AllowAll");
 app.UseSwagger();
 app.UseSwaggerUI();
 
-// ✅ Explicitly map controllers before UseSpa
+// Explicitly map controllers before UseSpa
 app.UseEndpoints(endpoints =>
 {
     endpoints.MapControllers();
@@ -35,7 +50,7 @@ app.UseEndpoints(endpoints =>
 
 app.UseHttpsRedirection();
 
-// ✅ Serve Next.js frontend, but keep it at the end
+// Serve Next.js frontend
 app.UseSpa(spa =>
 {
     spa.Options.SourcePath = "ClientApp";
