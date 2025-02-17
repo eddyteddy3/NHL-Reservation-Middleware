@@ -52,9 +52,9 @@ public class MewsApiService
         var requestJson = JsonSerializer.Serialize(request);
         var content = new StringContent(requestJson, Encoding.UTF8, "application/json");
 
-        string ApiUrl = $"{_baseUrl}/api/connector/v1/reservations/getAll/2023-06-06";
+        string apiUrl = $"{_baseUrl}/api/connector/v1/reservations/getAll/2023-06-06";
 
-        HttpResponseMessage response = await _httpClient.PostAsync(ApiUrl, content);
+        HttpResponseMessage response = await _httpClient.PostAsync(apiUrl, content);
         
         if (!response.IsSuccessStatusCode)
         {
@@ -67,7 +67,7 @@ public class MewsApiService
         return reservationResponse;
     }
 
-    public async Task<MewsCustomerResponse> GetCustomerDataAsync(string accountId)
+    public async Task<MewsCustomerResponse?> GetCustomerDataAsync(string accountId)
     {
         var request = new MewsCustomerRequest
         {
@@ -86,21 +86,9 @@ public class MewsApiService
         var requestJson = JsonSerializer.Serialize(request);
         var content = new StringContent(requestJson, Encoding.UTF8, "application/json");
 
-        string ApiUrl = $"{_baseUrl}/api/connector/v1/customers/getAll";
+        string apiUrl = $"{_baseUrl}/api/connector/v1/customers/getAll";
 
-        Console.WriteLine("---- HTTP REQUEST ----");
-        Console.WriteLine($"URL: {ApiUrl}");
-        Console.WriteLine($"Method: POST");
-        Console.WriteLine("Headers:");
-        foreach (var header in _httpClient.DefaultRequestHeaders)
-        {
-            Console.WriteLine($"  {header.Key}: {string.Join(", ", header.Value)}");
-        }
-        Console.WriteLine("Body:");
-        Console.WriteLine(requestJson);
-        Console.WriteLine("----------------------");
-
-        HttpResponseMessage response = await _httpClient.PostAsync(ApiUrl, content);
+        HttpResponseMessage response = await _httpClient.PostAsync(apiUrl, content);
         
         if (!response.IsSuccessStatusCode)
         {

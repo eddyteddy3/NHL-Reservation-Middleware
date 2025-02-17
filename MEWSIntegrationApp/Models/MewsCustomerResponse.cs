@@ -44,8 +44,8 @@ public record Customer
     public string? Address { get; set; }
     public string? AddressId { get; set; }
     public string[] Classifications { get; set; }
-    [JsonConverter(typeof(JsonStringEnumConverter))]
-    public Option[] Options { get; set; }
+    // [JsonConverter(typeof(JsonStringEnumConverter))]
+    public string[] Options { get; set; }
     public string? CategoryId { get; set; }
     public string? BirthDateUtc { get; set; }
     public string? ItalianDestinationCode { get; set; }
