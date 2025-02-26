@@ -1,3 +1,5 @@
+using System.Security.Cryptography.X509Certificates;
+
 namespace MEWSIntegrationApp.Models;
 
 public record MewsReservationResponse
@@ -10,11 +12,11 @@ public record Reservation
 {
     public string Id { get; set; }
     public string ServiceId { get; set; }
-    public string AccountId { get; set; }
+    public string AccountId { get; set; } // required for customer/company lookup
     public string AccountType { get; set; }
     public string CreatorProfileId { get; set; }
     public string UpdaterProfileId { get; set; }
-    public string BookerId { get; set; }
+    public string BookerId { get; set; } // required
     public string Number { get; set; }
     public string State { get; set; }
     public string Origin { get; set; }
@@ -47,4 +49,71 @@ public record PersonCount
 {
     public string AgeCategoryId { get; set; }
     public int Count { get; set; }
+}
+
+// ---------------------------------------------------
+
+
+public record ReservationAllItemsRequest
+{
+    public string ClientToken { get; set; }
+    public string AccessToken { get; set; }
+    public string Client { get; set; }
+    public string[] ReservationIds { get; set; }
+    public Limitation Limitation { get; set; }
+}
+
+public record ReservationAllItemsResponse
+{
+    public ReservationItem[] Reservations { get; set; }
+}
+
+public record ReservationItem
+{
+    public string ReservationId { get; set; }
+    public List<ReservationDetailItem> Items { get; set; }
+}
+
+public record ReservationDetailItem
+{
+    public string Id { get; set; }
+    public string AccountId { get; set; }
+    public string CustomerId { get; set; }
+    public string OrderId { get; set; }
+    public string ServiceId { get; set; }
+    public string Type { get; set; }
+    public string SubType { get; set; }
+    public string Name { get; set; }
+    public string? Notes { get; set; }
+    public ReservationDetailItemAmount Amount { get; set; }
+
+}
+
+public record ReservationDetailItemAmount
+{
+    public double Value { get; set; }
+    public double Net { get; set; }
+    public double Tax { get; set; }
+    public double NetValue { get; set; }
+    public double GrossValue { get; set; }
+    public List<ReservationDetailItemTaxValue> TaxValues { get; set; }
+    public ReservationDetailItemBreakdown Breakdown { get; set; }
+}
+
+public record ReservationDetailItemTaxValue
+{
+    public string Code { get; set; }
+    public double Value { get; set; }
+}
+
+public record ReservationDetailItemBreakdown
+{
+    public List<ReservationDetailItemBreakdownItem> Items { get; set; }
+}
+
+public record ReservationDetailItemBreakdownItem
+{
+    public string TaxRateCode { get; set; }
+    public double Amount { get; set; }
+    public double TaxValue { get; set; }
 }

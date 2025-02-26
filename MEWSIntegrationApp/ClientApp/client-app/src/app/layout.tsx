@@ -27,3 +27,39 @@ export default function RootLayout({ children, }: Readonly<{ children: React.Rea
         </html>
     );
 }
+
+
+/*
+
+
+    const updateEmailHtml = (reservation: ReservationDetails) => {
+        let details = "";
+        if (shouldAddProduct) details += "<p>Product: " + "Breakfast included" + "</p>";
+        if (shouldAddRate) details += "<p>Rate: " + "€150 per night" + "</p>";
+        if (shouldAddTotalAmount) details += "<p>Total Amount: " + "€220" + "</p>";
+
+        let template = emailTemplate
+            .replace("{FirstName}", "Test")
+            .replace("{LastName}", reservation.Customer[0].LastName)
+            .replace("{EnterpriseName}", "Notiz Hotel")
+            .replace("{detailsHtml}", details);
+
+        setEmailHtml(template);
+    }
+
+    const handleCheckboxChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, checked } = event.target;
+        if (name === "rate") {
+            setShouldAddRate(checked);
+        } else if (name === "product") {
+            setShouldAddProduct(checked);
+        }
+        else if (name === "totalAmount") {
+            setShouldAddTotalAmount(checked);
+        }
+    
+        if (reservations && reservations.Reservation) {
+            updateEmailHtml(reservations);
+        }
+    };
+    */

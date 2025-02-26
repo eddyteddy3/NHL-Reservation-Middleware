@@ -37,14 +37,57 @@ public class MewsWebhookController(
 
         var reservationApiResponse = await _mewsApiService.GetReservationsAsync(reservation);
         var accountId = reservationApiResponse?.Reservations.First().AccountId ?? "NULL ACCOUNT ID";
+        var reservationId = reservationApiResponse?.Reservations.First().Id ?? "NULL ACCOUNT ID";
         var customerApiResponse = await _mewsApiService.GetCustomerDataAsync(accountId);
+        var reservationGetAllItemApiResponse = await _mewsApiService.GetReservationAllItems(reservationId);
+
+        Console.WriteLine($"get all items response: {reservationGetAllItemApiResponse}");
+        
+        var firstReservationDetail = reservationGetAllItemApiResponse?.Reservations.First();
+        
+        if (firstReservationDetail == null)
+        {
+            return BadRequest(new { message = "invalid reservation detail (or no details?)" });
+        }
+
+        double totalAmount = 0;
+        List<string> products = new List<string>();
+        int personCount = 0;
+
+        if (reservationApiResponse?.Reservations.First().PersonCounts != null)
+        {
+            foreach (var person in reservationApiResponse.Reservations.First().PersonCounts)
+            {
+                personCount += person.Count;
+            }
+        }
+
+        // foreach (var person in reservationApiResponse.Reservations.First().PersonCounts)
+        // {
+        //     person.Count += person.Count;
+        // }
+
+        foreach (var item in firstReservationDetail.Items)
+        {
+            totalAmount += item.Amount.Value;
+            products.Add(item.Name);
+            // Console.WriteLine($"reservation detail: {item.Name}");
+        }
+        
+        ReservationDetailsDto reservationDetailsDto = new ReservationDetailsDto
+        {
+            Id = reservationId,
+            TotalAmount = totalAmount.ToString(),
+            Products = products.ToArray(),
+            NumberOfAdults = personCount
+        };
         
         if (reservationApiResponse == null || customerApiResponse == null)
         {
             return BadRequest(new { message = "invalid response" });
         }
 
-        var reservationDto = new ReservationDto(reservationApiResponse.Reservations, customerApiResponse.Customers);
+        var reservationDto = new ReservationDto(reservationApiResponse.Reservations, customerApiResponse.Customers, reservationDetailsDto);
 
         var reservationDtoReservation = JsonSerializer.Serialize(reservationDto);
 

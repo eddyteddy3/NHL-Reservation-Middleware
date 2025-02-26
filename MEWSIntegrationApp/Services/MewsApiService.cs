@@ -100,4 +100,40 @@ public class MewsApiService
 
         return customerResponse;
     }
+
+    public async Task<ReservationAllItemsResponse?> GetReservationAllItems(string reservationId)
+    {
+        var request = new ReservationAllItemsRequest
+        {
+            ClientToken = _clientToken,
+            AccessToken = _accessToken,
+            Client = "MEWSIntegrationApp",
+            ReservationIds = [reservationId],
+            Limitation = new Limitation(1)
+        };
+
+        if (string.IsNullOrEmpty(request.ClientToken) || string.IsNullOrEmpty(request.AccessToken))
+        {
+            throw new ArgumentException("ClientToken and AccessToken are required.");
+        }
+
+        var requestJson = JsonSerializer.Serialize(request);
+        var content = new StringContent(requestJson, Encoding.UTF8, "application/json");
+
+        string apiUrl = $"{_baseUrl}/api/connector/v1/reservations/getAllItems";
+
+        HttpResponseMessage response = await _httpClient.PostAsync(apiUrl, content);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException($"Failed to get reservation items. Status code: {response.StatusCode}");
+        }
+
+        string jsonResponse = await response.Content.ReadAsStringAsync();
+        var reservationItemsResponse = JsonConvert.DeserializeObject<ReservationAllItemsResponse>(jsonResponse);
+
+        return reservationItemsResponse;
+    }
+
+    
 }

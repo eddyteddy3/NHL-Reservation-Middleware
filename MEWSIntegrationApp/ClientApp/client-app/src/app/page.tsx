@@ -93,17 +93,17 @@ interface ReservationDetails {
 }
 
 export default function ReservationsPage() {
-  const [reservations, setReservations] = useState<ReservationDetails | null>(null);
-  const [emailHtml, setEmailHtml] = useState("");
+    const [reservations, setReservations] = useState<ReservationDetails | null>(null);
+    const [emailHtml, setEmailHtml] = useState("");
+    const [shouldAddRate, setShouldAddRate] = useState(false);
+    const [shouldAddProduct, setShouldAddProduct] = useState(false);
+    const [shouldAddTotalAmount, setShouldAddTotalAmount] = useState(false);
+    const [remarks, setRemarks] = useState("");
 
-// fetch("/mockReservationData.json")
-//     .then((res) => res.json())
-//     .then((data) => setReservations(data));
-
-  useEffect(() => {
-      
+    useEffect(() => {
+        
     const eventSource = new EventSource("/api/mews/subscriptions/reservations");
-    
+
     eventSource.onopen = () => {
         console.log("Connection established");
     };
@@ -118,30 +118,84 @@ export default function ReservationsPage() {
             try {
                 const updatedData: ReservationDetails = JSON.parse(event.data);
                 
-                let template = emailTemplate
-                    .replace("{FirstName}", "Test")
-                    .replace("{LastName}", updatedData.Customer[0].LastName)
-                    .replace("{EnterpriseName}", "Notiz Hotel")
-                    .replace("{detailsHtml}", "<p>Reservation Number: " + updatedData.Reservation[0].Number + "</p>" + "(MORE DATA CAN BE ADDED)");
+                // let template = emailTemplate
+                //     .replace("{FirstName}", "Test")
+                //     .replace("{LastName}", updatedData.Customer[0].LastName)
+                //     .replace("{EnterpriseName}", "Notiz Hotel")
+                //     .replace("{detailsHtml}", "<p>Reservation Number: " + updatedData.Reservation[0].Number + "</p>" + "(MORE DATA CAN BE ADDED)");
+                // setEmailHtml(template);
 
-                setEmailHtml(template);
+
+                updateEmailTemplate(updatedData, shouldAddRate, shouldAddProduct, shouldAddTotalAmount);
                 setReservations(updatedData);
+
             } catch (error) {
                 console.error("❌ JSON Parsing Error:", error);
             }
         }
     };
-    
+
     eventSource.onerror = (error) => {
         console.error("EventSource failed:", error);
     };
-      
+        
     return () => {
         eventSource.close(); // Close the connection when the component is unmounted (cleanup)
     };
 
-  }, []);
-  
+    }, []);
+
+    const updateEmailTemplate = (
+        data: ReservationDetails,
+        rate: boolean,
+        product: boolean,
+        totalAmount: boolean,
+        remarks: string) => {
+
+        if (!data) return;
+
+        let details = "";
+        if (rate) details += "<p>Rate: " + "€150 per night" + "</p>";
+        if (product) details += "<p>Product: " + "Breakfast included" + "</p>";
+        if (totalAmount) details += "<p>Total Amount: " + "€220" + "</p>";
+        if (remarks) details += "<p>Remarks: " + remarks + "</p>";
+
+        let template = emailTemplate
+            .replace("{FirstName}", "Test")
+            .replace("{LastName}", data.Customer[0].LastName)
+            .replace("{EnterpriseName}", "Notiz Hotel")
+            .replace("{detailsHtml}", details);
+
+        setEmailHtml(template);
+    };
+
+
+    const handleCheckboxChange = (type: string) => {
+        let newRate = shouldAddRate;
+        let newProduct = shouldAddProduct;
+        let newTotalAmount = shouldAddTotalAmount;
+
+        if (type === "rate") newRate = !newRate;
+        if (type === "product") newProduct = !newProduct;
+        if (type === "totalAmount") newTotalAmount = !newTotalAmount;
+
+        setShouldAddRate(newRate);
+        setShouldAddProduct(newProduct);
+        setShouldAddTotalAmount(newTotalAmount);
+
+        if (reservations) {
+            updateEmailTemplate(reservations, newRate, newProduct, newTotalAmount, remarks);
+        }
+    };
+
+    const handleRemarksChange = (text: string) => {
+        setRemarks(text);
+
+        if (reservations) {
+            updateEmailTemplate(reservations, shouldAddRate, shouldAddProduct, shouldAddTotalAmount, text);
+        }
+    };
+
     if (!reservations) {
         return <div>Loading...</div>;
     }
@@ -155,17 +209,42 @@ export default function ReservationsPage() {
             <p>End: {new Date(reservations.Reservation[0].EndUtc).toLocaleString()}</p>
             <div className="mt-4">
                 <label className="flex items-center">
-                    <input type="checkbox" checked={reservations.Reservation[0].Options.OwnerCheckedIn} readOnly className="mr-2" />
-                    Skip Cleaning
+                    <input type="checkbox" 
+                        checked={shouldAddRate}
+                        onChange={() => handleCheckboxChange("rate")}
+                        className="mr-2" />
+                    Add rate
                 </label>
                 <label className="flex items-center">
-                    <input type="checkbox" checked={reservations.Reservation[0].Options.OwnerCheckedIn} readOnly className="mr-2" />
-                    More Can be added here...
+                    <input 
+                        type="checkbox"
+                        checked={shouldAddProduct}
+                        onChange={() => handleCheckboxChange("product")}
+                        className="mr-2" />
+                    Add product
                 </label>
-                {/*<label className="flex items-center">*/}
-                {/*    <input type="checkbox" checked={reservations.Reservation[0].Options.AllCompanionsCheckedIn} readOnly className="mr-2" />*/}
-                {/*    All Companions Checked In*/}
-                {/*</label>*/}
+                <label className="flex items-center">
+                    <input
+                        type="checkbox"
+                        checked={shouldAddTotalAmount}
+                        onChange={() => handleCheckboxChange("totalAmount")}
+                        className="mr-2" />
+                    Add total amount
+                </label>
+
+                {/* Remarks Input Field */}
+                <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700">
+                    Remarks
+                </label>
+                <textarea
+                    className="mt-1 p-2 border w-full rounded-md"
+                    rows={3}
+                    value={remarks}
+                    onChange={(e) => handleRemarksChange(e.target.value)}
+                    placeholder="Add any special remarks for this reservation..."
+                />
+                </div>
             </div>
 
             {emailHtml && (
