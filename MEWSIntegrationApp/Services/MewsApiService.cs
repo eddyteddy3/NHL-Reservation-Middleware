@@ -135,5 +135,102 @@ public class MewsApiService
         return reservationItemsResponse;
     }
 
-    
+    public async Task<MewsRateResponse?> GetRateDataAsync(string rateId)
+    {
+        var request = new MewsRateRequest
+        {
+            ClientToken = _clientToken,
+            AccessToken = _accessToken,
+            Client = "MEWSIntegrationApp",
+            RateIds = [rateId],
+            Limitation = new Limitation(1)
+        };
+
+        if (string.IsNullOrEmpty(request.ClientToken) || string.IsNullOrEmpty(request.AccessToken))
+        {
+            throw new ArgumentException("ClientToken and AccessToken are required.");
+        }
+
+        var requestJson = JsonSerializer.Serialize(request);
+        var content = new StringContent(requestJson, Encoding.UTF8, "application/json");
+
+        string apiUrl = $"{_baseUrl}/api/connector/v1/rates/getAll";
+
+        HttpResponseMessage response = await _httpClient.PostAsync(apiUrl, content);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException($"Failed to get rate data. Status code: {response.StatusCode}");
+        }
+
+        string jsonResponse = await response.Content.ReadAsStringAsync();
+        var rateResponse = JsonConvert.DeserializeObject<MewsRateResponse>(jsonResponse);
+
+        return rateResponse;
+    }
+
+    public async Task<MewsCreatePaymentRequestResponse?> AddPaymentRequest(PaymentRequestPayload request)
+    {
+        // MewsPaymentRequest paymentRequest = new MewsPaymentRequest(
+        //     request.AccountId,
+        //     request.ReservationId,
+        //     new MewsPaymentAmount(request.Amount),
+        //     request.Reason,
+        //     request.ExpirationDate,
+        //     request.Description,
+        //     null
+        // );
+
+        // var paymentRequest = new MewsPaymentRequest
+        // {
+        //     AccountId = request.AccountId,
+        //     Amount = new MewsPaymentAmount { Value = request.Amount },
+        //     Type = "Prepayment",
+        //     Reason = request.Reason,
+        //     ExpirationUtc = request.ExpirationDate,
+        //     ReservationId = request.ReservationId,
+        //     Description = request.Description
+        // };
+
+        var apiRequest = new MewsAddPaymentRequest
+        {
+            ClientToken = _clientToken,
+            AccessToken = _accessToken,
+            Client = "MEWSIntegrationApp",
+            PaymentRequests = [
+                new MewsPaymentRequest
+                {
+                    AccountId = request.AccountId,
+                    Amount = new MewsPaymentAmount { Value = request.Amount },
+                    Type = "Payment",
+                    Reason = request.Reason,
+                    ExpirationUtc = request.ExpirationDate,
+                    ReservationId = request.ReservationId,
+                    Description = request.Description
+                }
+            ]
+        };
+
+        if (string.IsNullOrEmpty(apiRequest.ClientToken) || string.IsNullOrEmpty(apiRequest.AccessToken))
+        {
+            throw new ArgumentException("ClientToken and AccessToken are required.");
+        }
+
+        var requestJson = JsonSerializer.Serialize(apiRequest);
+        var content = new StringContent(requestJson, Encoding.UTF8, "application/json");
+
+        string apiUrl = $"{_baseUrl}/api/connector/v1/paymentRequests/add";
+
+        HttpResponseMessage response = await _httpClient.PostAsync(apiUrl, content);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException($"Failed to create the payment request. Status code: {response.StatusCode}");
+        }
+
+        string jsonResponse = await response.Content.ReadAsStringAsync();
+        var paymentRequestResponse = JsonConvert.DeserializeObject<MewsCreatePaymentRequestResponse>(jsonResponse);
+
+        return paymentRequestResponse;
+    }
 }

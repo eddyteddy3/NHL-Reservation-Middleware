@@ -37,11 +37,14 @@ public class MewsWebhookController(
 
         var reservationApiResponse = await _mewsApiService.GetReservationsAsync(reservation);
         var accountId = reservationApiResponse?.Reservations.First().AccountId ?? "NULL ACCOUNT ID";
-        var reservationId = reservationApiResponse?.Reservations.First().Id ?? "NULL ACCOUNT ID";
+        var reservationId = reservationApiResponse?.Reservations.First().Id ?? "NULL reservation ID";
+        var rateId = reservationApiResponse.Reservations.First().RateId ?? "NULL rate ID";
+        
         var customerApiResponse = await _mewsApiService.GetCustomerDataAsync(accountId);
         var reservationGetAllItemApiResponse = await _mewsApiService.GetReservationAllItems(reservationId);
+        var getAllRateApiResponse = await _mewsApiService.GetRateDataAsync(rateId);
 
-        Console.WriteLine($"get all items response: {reservationGetAllItemApiResponse}");
+        Console.WriteLine($"get all items response: {getAllRateApiResponse}");
         
         var firstReservationDetail = reservationGetAllItemApiResponse?.Reservations.First();
         
@@ -62,16 +65,10 @@ public class MewsWebhookController(
             }
         }
 
-        // foreach (var person in reservationApiResponse.Reservations.First().PersonCounts)
-        // {
-        //     person.Count += person.Count;
-        // }
-
         foreach (var item in firstReservationDetail.Items)
         {
             totalAmount += item.Amount.Value;
             products.Add(item.Name);
-            // Console.WriteLine($"reservation detail: {item.Name}");
         }
         
         ReservationDetailsDto reservationDetailsDto = new ReservationDetailsDto
@@ -87,7 +84,13 @@ public class MewsWebhookController(
             return BadRequest(new { message = "invalid response" });
         }
 
-        var reservationDto = new ReservationDto(reservationApiResponse.Reservations, customerApiResponse.Customers, reservationDetailsDto);
+        Rate[] rates = getAllRateApiResponse?.Rates ?? new Rate[] { };
+
+        var reservationDto = new ReservationDto(
+            reservationApiResponse.Reservations,
+            customerApiResponse.Customers,
+            reservationDetailsDto,
+            new ReservationRateDto(rates));
 
         var reservationDtoReservation = JsonSerializer.Serialize(reservationDto);
 
@@ -110,6 +113,29 @@ public class MewsWebhookController(
                 events = $"event {reservation.Events.First()} received"
             }
         );
+    }
+
+    [HttpPost("/api/create-payment-request")]
+    public async Task<IActionResult> ReceivePaymentRequest([FromBody] JsonElement payload)
+    {
+        var paymentRequest = ExtractRequestPayload(payload);
+
+        if (paymentRequest == null)
+        {
+            return BadRequest(new { message = "Nothing found in the payload" });
+        }
+
+        var createPaymentResponse = await _mewsApiService.AddPaymentRequest(paymentRequest);
+
+        if (createPaymentResponse == null)
+        {
+            return BadRequest(new {
+                message = "Could not create the request payment"
+            });
+        }
+
+        string paymentRequestId = createPaymentResponse.PaymentRequests[0].Id;
+        return Ok(new { requestId = paymentRequestId });
     }
 
     [HttpGet("subscriptions/reservations")]
@@ -138,7 +164,8 @@ public class MewsWebhookController(
     }
 
     private WebhookEventPayload? ExtractPayload(JsonElement payload)
-    {
-        return payload.Deserialize<WebhookEventPayload>();
-    }
+    =>  payload.Deserialize<WebhookEventPayload>();
+
+    private PaymentRequestPayload? ExtractRequestPayload(JsonElement payload)
+    => payload.Deserialize<PaymentRequestPayload>();
 }
