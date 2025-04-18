@@ -116,7 +116,7 @@ public class MewsWebhookController(
     }
 
     [HttpPost("/api/create-payment-request")]
-    public async Task<IActionResult> ReceivePaymentRequest([FromBody] JsonElement payload)
+    public async Task<IActionResult> ReceivePaymentRequest([FromQuery] JsonElement payload)
     {
         var paymentRequest = ExtractRequestPayload(payload);
 

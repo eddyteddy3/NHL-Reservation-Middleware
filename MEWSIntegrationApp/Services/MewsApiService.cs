@@ -171,27 +171,6 @@ public class MewsApiService
 
     public async Task<MewsCreatePaymentRequestResponse?> AddPaymentRequest(PaymentRequestPayload request)
     {
-        // MewsPaymentRequest paymentRequest = new MewsPaymentRequest(
-        //     request.AccountId,
-        //     request.ReservationId,
-        //     new MewsPaymentAmount(request.Amount),
-        //     request.Reason,
-        //     request.ExpirationDate,
-        //     request.Description,
-        //     null
-        // );
-
-        // var paymentRequest = new MewsPaymentRequest
-        // {
-        //     AccountId = request.AccountId,
-        //     Amount = new MewsPaymentAmount { Value = request.Amount },
-        //     Type = "Prepayment",
-        //     Reason = request.Reason,
-        //     ExpirationUtc = request.ExpirationDate,
-        //     ReservationId = request.ReservationId,
-        //     Description = request.Description
-        // };
-
         var apiRequest = new MewsAddPaymentRequest
         {
             ClientToken = _clientToken,
