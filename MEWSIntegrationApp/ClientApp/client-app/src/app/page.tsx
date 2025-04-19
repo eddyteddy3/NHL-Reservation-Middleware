@@ -123,45 +123,47 @@ export default function ReservationsPage() {
     const [paymentAmount, setPaymentAmount] = useState(0.0);
     const [paymentRequestId, setPaymentRequestId] = useState("");
     const [shouldIncludePaymentRequest, setShouldIncludePaymentRequest] = useState(false);
+    const [shouldIncludeCheckInLink, setshouldIncludeCheckInLink] = useState(false);
     const [paymentExpirationDate, setPaymentExpirationDate] = useState<string>("");
 
     useEffect(() => {
         
-    const eventSource = new EventSource("/api/mews/subscriptions/reservations");
-
-    eventSource.onopen = () => {
-        console.log("Connection established");
-    };
-
-    eventSource.onmessage = (event) => {
-        console.log("Event received", event.data);
-
-        if (event.data) {
-            try {
-                const updatedData: ReservationDetails = JSON.parse(event.data);
-
-                updateEmailTemplate(
-                    updatedData,
-                    shouldAddRate,
-                    shouldAddProduct,
-                    shouldAddTotalAmount,
-                    shouldIncludePaymentRequest,
-                    remarks);
-                setReservations(updatedData);
-
-            } catch (error) {
-                console.error("❌ JSON Parsing Error:", error);
+        const eventSource = new EventSource("/api/mews/subscriptions/reservations");
+    
+        eventSource.onopen = () => {
+            console.log("Connection established");
+        };
+    
+        eventSource.onmessage = (event) => {
+            console.log("Event received", event.data);
+    
+            if (event.data) {
+                try {
+                    const updatedData: ReservationDetails = JSON.parse(event.data);
+    
+                    updateEmailTemplate(
+                        updatedData,
+                        shouldAddRate,
+                        shouldAddProduct,
+                        shouldAddTotalAmount,
+                        shouldIncludePaymentRequest,
+                        shouldIncludeCheckInLink,
+                        remarks);
+                    setReservations(updatedData);
+    
+                } catch (error) {
+                    console.error("❌ JSON Parsing Error:", error);
+                }
             }
-        }
-    };
-
-    eventSource.onerror = (error) => {
-        console.error("EventSource failed:", error);
-    };
-        
-    return () => {
-        eventSource.close(); // Close the connection when the component is unmounted (cleanup)
-    };
+        };
+    
+        eventSource.onerror = (error) => {
+            console.error("EventSource failed:", error);
+        };
+            
+        return () => {
+            eventSource.close(); // Close the connection when the component is unmounted (cleanup)
+        };
 
     }, []);
 
@@ -171,27 +173,48 @@ export default function ReservationsPage() {
         product: boolean,
         totalAmount: boolean,
         shouldAddPaymentRequest: boolean,
+        shouldAddCheckin: boolean,
         remarks: string) => {
 
         if (!data) return;
 
         var reservationRate = data.ReservationRate.Rates[0].Name;
         var reservationProduct = data.ReservationDetails.Products.map((product) => product).join(", ");
-        var reservationTotalAmount = data.ReservationDetails.TotalAmount;
-        var requestPaymentUrl = "https://app.mews-demo.com/navigator/payment-requests/detail/" + paymentRequestId;
+        var reservationTotalAmount = Number(data.ReservationDetails.TotalAmount).toFixed(2)
+        
+        // replace the URLs with the server link
+        // /dae50732-38cb-4e45-8eb2-b2bc01437522?accId=ae295d51-607c-48e9-9ab4-b2b7012701f9&amount=12
+        var baseUri = 'https://localhost:5001';
+        
+        var paymentPath = "/redirect/payment/" + 
+            (data.Reservation[0].Id) + 
+            "?accId=" + (data.Reservation[0].AccountId) + 
+            "&amount=" + (reservationTotalAmount)
+        var requestPaymentUrl = baseUri + paymentPath
 
+        var checkinPath = "/redirect/tempCheckIn/" +
+            (data.Reservation[0].Id) +
+            "?name=" + (data.Customer[0].LastName) +
+            "&checkInDate=" + ("")
+        var checkinUrl = baseUri + checkinPath;
+        
+        console.warn("request payment: " + requestPaymentUrl)
+        console.warn("check in: " + checkinUrl)
+        
         let details = "";
+        if (rate || product || totalAmount) details += "We hereby happily confirm the following:";
         if (rate) details += "<p>Rate: " + reservationRate + "</p>";
         if (product) details += "<p>Product: " + reservationProduct + "</p>";
-        if (totalAmount) details += "<p>Total Amount: " + reservationTotalAmount + "</p>";
+        if (totalAmount) details += "<p>Total Amount: €" + reservationTotalAmount + "</p>";
         if (remarks) details += "<p>Remarks: " + remarks + "</p>";
 
         let template = emailTemplate
-            .replace("{FirstName}", "Test")
+            .replace("{FirstName}", data.Customer[0].FirstName ?? "")
             .replace("{LastName}", data.Customer[0].LastName)
-            .replace("{EnterpriseName}", "Notiz Hotel")
+            .replaceAll("{EnterpriseName}", "Notiz Hotel")
             .replace("{detailsHtml}", details)
-            .replace("{paymentLink}", requestPaymentUrl); // add the logic to the button based on the ccondition
+            .replace("{paymentLink}", requestPaymentUrl) // add the logic to the button based on the ccondition
+            .replace("{checkinLink}", checkinUrl); // add the logic to the button based on the ccondition
 
         setEmailHtml(template);
         navigator.clipboard.writeText(template);
@@ -214,6 +237,8 @@ export default function ReservationsPage() {
         setShouldAddProduct(newProduct);
         setShouldAddTotalAmount(newTotalAmount);
         setShouldIncludePaymentRequest(newPaymentRequest);
+        
+        // TODO: check for the `shouldIncludeCheckInLink`
 
         if (reservations) {
             updateEmailTemplate(
@@ -222,6 +247,7 @@ export default function ReservationsPage() {
                 newProduct,
                 newTotalAmount,
                 newPaymentRequest,
+                shouldIncludeCheckInLink,
                 remarks);
         }
     };
@@ -267,6 +293,7 @@ export default function ReservationsPage() {
                 shouldAddProduct,
                 shouldAddTotalAmount,
                 shouldIncludePaymentRequest,
+                shouldIncludeCheckInLink,
                 text
             );
         }
@@ -284,48 +311,51 @@ export default function ReservationsPage() {
         <div className="p-4 border rounded-lg shadow-md bg-white">
             <h2 className="text-xl font-bold mb-2">Reservation #{reservations.Reservation[0].Number}</h2>
             <p>Customer: {reservations.Customer[0].LastName} ({reservations.Customer[0].Email})</p>
-            <p>State: {reservations.Reservation[0].State}</p>
-            <p>Start: {new Date(reservations.Reservation[0].StartUtc).toLocaleString()}</p>
-            <p>End: {new Date(reservations.Reservation[0].EndUtc).toLocaleString()}</p>
-            <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700">
-                    Payment Amount (€)
-                </label>
-                <input
-                    type="number"
-                    className="mt-1 p-2 border w-full rounded-md"
-                    value={paymentAmount}
-                    onChange={(e) => setPaymentAmount(Number(e.target.value))}
-                    placeholder="Enter payment amount"
-                />
-
-                <button 
-                    className="mt-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                    onClick={handleAddPaymentRequest}
-                    disabled={!paymentAmount && !paymentExpirationDate}>
-                    Add payment request</button>
-            </div>
-
-            <div className="mt-2">
-                <label className="block text-sm font-medium text-gray-700">
-                    Payment Expiration Date (UTC)
-                </label>
-                <input
-                    type="datetime-local"
-                    className="mt-1 p-2 border w-full rounded-md"
-                    value={paymentExpirationDate.slice(0, 16)} // ✨ trims to "YYYY-MM-DDTHH:mm"
-                    min={new Date().toISOString().slice(0, 16)}
-                    max={new Date(reservations.Reservation[0].EndUtc).toISOString().slice(0, 16)}
-                    onChange={(e) => {
-                        const localDate = new Date(e.target.value);
-                        const utcDate = new Date(localDate.toISOString());
-                        setPaymentExpirationDate(utcDate.toISOString()); // Store in UTC format
-                    }}
-                />
-                <small className="text-gray-500">
-                    Must be on or before {new Date(reservations.Reservation[0].EndUtc).toLocaleDateString()}
-                </small>
-            </div>
+            
+            {/*<p>State: {reservations.Reservation[0].State}</p>*/}
+            {/*<p>Start: {new Date(reservations.Reservation[0].StartUtc).toLocaleString()}</p>*/}
+            {/*<p>End: {new Date(reservations.Reservation[0].EndUtc).toLocaleString()}</p>*/}
+            {/*<div className="mt-4">*/}
+            {/*    <label className="block text-sm font-medium text-gray-700">*/}
+            {/*        Payment Amount (€)*/}
+            {/*    </label>*/}
+            {/*    <input*/}
+            {/*        type="number"*/}
+            {/*        className="mt-1 p-2 border w-full rounded-md"*/}
+            {/*        value={paymentAmount}*/}
+            {/*        onChange={(e) => setPaymentAmount(Number(e.target.value))}*/}
+            {/*        placeholder="Enter payment amount"*/}
+            {/*    />*/}
+            
+            {/*    <button */}
+            {/*        className="mt-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"*/}
+            {/*        onClick={handleAddPaymentRequest}*/}
+            {/*        disabled={!paymentAmount && !paymentExpirationDate}>*/}
+            {/*        Add payment request</button>*/}
+            {/*</div>*/}
+            
+            {/*<div className="mt-2">*/}
+            {/*    <label className="block text-sm font-medium text-gray-700">*/}
+            {/*        Payment Expiration Date (UTC)*/}
+            {/*    </label>*/}
+            {/*    <input*/}
+            {/*        type="datetime-local"*/}
+            {/*        className="mt-1 p-2 border w-full rounded-md"*/}
+            {/*        value={paymentExpirationDate.slice(0, 16)} // ✨ trims to "YYYY-MM-DDTHH:mm"*/}
+            {/*        min={new Date().toISOString().slice(0, 16)}*/}
+            {/*        max={new Date(reservations.Reservation[0].EndUtc).toISOString().slice(0, 16)}*/}
+            {/*        onChange={(e) => {*/}
+            {/*            const localDate = new Date(e.target.value);*/}
+            {/*            const utcDate = new Date(localDate.toISOString());*/}
+            {/*            setPaymentExpirationDate(utcDate.toISOString()); // Store in UTC format*/}
+            {/*        }}*/}
+            {/*    />*/}
+            {/*    <small className="text-gray-500">*/}
+            {/*        Must be on or before {new Date(reservations.Reservation[0].EndUtc).toLocaleDateString()}*/}
+            {/*    </small>*/}
+            {/*</div>*/}
+            
+            
             <div className="mt-4">
                 <label className="flex items-center">
                     <input type="checkbox" 
@@ -348,7 +378,7 @@ export default function ReservationsPage() {
                         checked={shouldAddTotalAmount}
                         onChange={() => handleCheckboxChange("totalAmount")}
                         className="mr-2" />
-                    Add total amount (<b><i>{reservations.ReservationDetails.TotalAmount}</i></b>)
+                    Add total amount (<b><i>€{Number(reservations.ReservationDetails.TotalAmount).toFixed(2)}</i></b>)
                 </label>
 
                 {paymentRequestId && (
@@ -392,8 +422,6 @@ export default function ReservationsPage() {
         </div>
     );
 }
-
-// var newEmailTemplate = 
 
 var emailTemplate = `
 <div style="text-align: center;">
@@ -439,8 +467,7 @@ var emailTemplate = `
           <h3 style="color: #541E1E;">Thank you for your reservation!</h3>
           <p>
             Dear {FirstName} {LastName},<br><br>
-            Many thanks for reserving your stay at <strong>{EnterpriseName}</strong> in Leeuwarden. We hope you are just as excited as we are!<br><br>
-            We hereby happily confirm the following:
+            Many thanks for reserving your stay at <strong> {EnterpriseName} </strong> in Leeuwarden. We hope you are just as excited as we are!<br><br>
           </p>
 
           <div>{detailsHtml}</div>
@@ -449,10 +476,22 @@ var emailTemplate = `
             We would like to wish you a safe journey to Leeuwarden and of course a wonderful stay at <strong>{EnterpriseName}</strong>.
           </p>
 
+          <!-- 🔘 Check-in Button -->
+          <div style="text-align: center;">
+            <a href="{checkinLink}" class="button">Check-In Online</a>
+          </div>
+
+          <br>
+
+          <p style="text-align: center;">
+            OR
+          </p>
+
           <!-- 🔘 Payment Button -->
           <div style="text-align: center;">
-            <a href="{paymentLink}" class="button">Complete Payment</a>
+            <a href="{paymentLink}" class="button">Request Payment Link</a>
           </div>
+
         </div>
 
         <hr style="border-top: 1.5pt solid #541E1E; margin-top: 30px;">

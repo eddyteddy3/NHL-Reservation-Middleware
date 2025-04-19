@@ -23,6 +23,8 @@ public class MewsWebhookController(
     public async Task<IActionResult> ReceiveWebhook([FromBody] JsonElement payload)
     {
         logger.LogInformation("Received MEWS webhook");
+        
+        Console.WriteLine("Received MEWS webhook: ", payload.ToString());
         // Console.WriteLine("Received MEWS webhook: {0}", payload.ToString());
     
         var reservation = ExtractPayload(payload);
@@ -116,7 +118,7 @@ public class MewsWebhookController(
     }
 
     [HttpPost("/api/create-payment-request")]
-    public async Task<IActionResult> ReceivePaymentRequest([FromQuery] JsonElement payload)
+    public async Task<IActionResult> ReceivePaymentRequest([FromBody] JsonElement payload)
     {
         var paymentRequest = ExtractRequestPayload(payload);
 
